@@ -9,9 +9,9 @@ int main(int argc, char **argv) {
         printf("Fork error\n");
     }
     if (process == 0) {
-        char *exe_name = "/opt/homebrew/bin/tmux";
+        char *exe_name = "tmux";
         char *params[]  = {"tmux", "refresh-client", NULL};
-        int status = execv(exe_name, params);
+        int status = execvp(exe_name, params);
 
         // snatched from https://stackoverflow.com/a/32142863
         /* char* arr[] = {"ls", "-l", "-R", "-a", NULL}; */
