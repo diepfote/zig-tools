@@ -10,18 +10,14 @@ int main(int argc, char **argv) {
     }
     if (process == 0) {
         char *exe_name = "/opt/homebrew/bin/tmux";
-        /* char *exe_name = "/opt/homebrew/opt/coreutils/libexec/gnubin/ls"; */
-        /* char *arg0 = "refresh-client"; */
-        char *arg0 = "-h\0";
-        /* char *arg0 = "-alh"; */
-        char **ptrptr = &arg0;
-        printf("main.c: ptrptr: %s\n", *ptrptr);
-        printf("main.c: argv: %s\n", *++argv);
-        /* int status = execl(exe_name, arg0); */
-        /* int status = execv(exe_name, ptrptr); */
-        int status = execv(exe_name, *++argv);
-        printf("main.c: Ran refresh: %d\n", status);
+        char *params[]  = {"tmux", "refresh-client", NULL};
+        int status = execv(exe_name, params);
 
+        // snatched from https://stackoverflow.com/a/32142863
+        /* char* arr[] = {"ls", "-l", "-R", "-a", NULL}; */
+        /* int status = execv("/bin/ls", arr); */
+
+        //on successful execution of cmd, this exit never appears
         printf("main.c: status:%d,errno:%d,error:%s\n", status, errno, strerror(errno));
     }
     /* sleep(100); */
