@@ -36,87 +36,20 @@ fn update_tmp_bash_env_content(os_cloud: ?[:0]const u8, kubeconfig: ?[:0]const u
     // https://github.com/oven-sh/bun/blob/93714292bfea5140c62b6750c71c91ed20d819c5/src/install/repository.zig#L114
     // https://github.com/evopen/ziglings/blob/614e7561737c340dcf8d7022b8e5bf8bcf22d84a/tools/check-exercises.zig#L33
     //
-    const unistd = @cImport(@cInclude("unistd.h"));
-    const stdio = @cImport(@cInclude("stdio.h"));
-    const string = @cImport(@cInclude("string.h"));
-    var process: unistd.pid_t = unistd.fork();
-    var status: c_int = 0;
-    if (process < 0) {
-        // TODO print in debug mode
-        try stdout.print("{s}:{d}\n", .{ "fork error", process });
-    }
-    if (process == 0) {
-        // try stdout.print("{s}\n", .{"fork worked"});
-        //
-        // const exe_name: [*c]const u8 = "/opt/homebrew/bin/tmux";
-        // TODO only exe_arg does not work
-        // TODO this should be a pointer pointer, not just a pointer
-        // const exe_args: [*c]u8 = @constCast("refresh-client");
-        // status = unistd.execv(exe_name, &exe_args);
-        // var errno = std.c._errno().*;
-        // try stdout.print("status:{d}:errno:{d}\n", .{
-        //     status,
-        //     errno,
-        // });
-        // _ = stdio.printf("%s\n", string.strerror(errno));
+    const spin_off = @cImport({
+        @cInclude("spin_off.c");
+    });
 
-        // TODO continue here
-        const exe_name: [*c]const u8 = "/opt/homebrew/bin/tmux";
-        // const exe_name: [*c]const c_char = @as([*c]c_char, @ptrCast(@constCast(&"/opt/homebrew/bin/tmux")));
-        // const exe_name: [*c]const u8 = "/opt/homebrew/opt/coreutils/libexec/gnubin/ls";
-        // TODO only exe_arg does not work
-        // TODO this should be a pointer pointer, not just a pointer
-        // const exe_args: [*c]u8 = @constCast("refresh-client");
-        // const exe_args = [1][4]u8{[_]u8{ 't', 'e', 's', 't' }};
-        // var exe_args = [8][4]u8{
-        //     [_]u8{ 't', 'e', 's', 't' },
-        //     [_]u8{ 't', 'e', 's', 't' },
-        //     [_]u8{ 't', 'e', 's', 't' },
-        //     [_]u8{ 't', 'e', 's', 't' },
-        //     [_]u8{ 't', 'e', 's', 't' },
-        //     [_]u8{ 't', 'e', 's', 't' },
-        //     [_]u8{ 't', 'e', 's', 't' },
-        //     [_]u8{ 't', 'e', 's', 't' },
-        // };
-        var exe_arg = "refresh-client";
-        // var exe_arg = "-alh";
+    spin_off.tmux_refresh_client();
 
-        // char**, char pointer pointer
-        // var exe_args_ptr: [*]*anyopaque = @ptrCast(@constCast(&[_]*anyopaque{@as([*c]u8, @alignCast(@ptrCast(&exe_arg)))}));
-        // var exe_args_ptr: [*]*anyopaque = @as([*]*anyopaque, @ptrCast(@constCast(&[_]*anyopaque{@as([*c]u8, @alignCast(@ptrCast(&exe_arg)))})));
-        // var exe_args_ptr: [*]*anyopaque = @as([*]*anyopaque, @ptrCast(@constCast(&[_]*anyopaque{@as([*c]u8, @alignCast(@ptrCast(&exe_arg)))})));
-        // var exe_args_ptr: [*c][*c]u8 = @as([*c][*c]u8, @ptrCast(@constCast(&[_][*c]u8{@as([*c]u8, @alignCast(@ptrCast(@constCast(exe_arg))))})));
-        // var exe_args_ptr: [*c][*c]c_char = @as([*c][*c]u8, @ptrCast(@constCast(&[_][*c]u8{@constCast(exe_arg)})));
-        // var exe_args_ptr: *[*c]u8 = @as(*[*c]u8, @ptrCast(@constCast(&[_][*c]u8{@constCast(exe_arg)})));
-        // var exe_args_ptr: [*c]const [*c]u8 = @as([*c]const [*c]u8, @ptrCast(&[_][*c]u8{@constCast(exe_arg)}));
-
-        // var exe_args_ptr: [*c]const [*c]u8 = @as([*c]const [*c]u8, @alignCast(@ptrCast(&exe_args)));
-        var exe_args_ptr: [*c]const [*c]u8 = (&[_][*c]u8{@constCast(exe_arg)}).ptr;
-        // TODO try @ptrCast
-        // https://github.com/ziglang/zig/issues/2894#issuecomment-511213860
-
-        const print = @import("std").debug.print;
-        print("exe_name: {s}\n", .{exe_name});
-        // TODO should this not be .*.*? I think we do not have a pointer pointer but a pointer
-        print("exe_args_ptr: {s}\n", .{exe_args_ptr.*});
-
-        // status = unistd.execv(exe_name, exe_args_ptr);
-        // status = unistd.execv(exe_name, @ptrCast([*c][*c]const u8)&exe_args);
-        // status = unistd.execv(exe_name, exe_args_ptr);
-        status = unistd.execv(exe_name, exe_args_ptr);
-        // status = unistd.execv(exe_name, null);
-        // var exe_arg_second_test: [*c]const u8 = "refresh-client";
-        // var exe_arg_second_test: [*c]const u8 = "-alh";
-        // print("exe_arg_second_test: {s}\n", .{exe_arg_second_test});
-        // status = unistd.execl(exe_name, exe_arg_second_test);
-        // status = unistd.execl(exe_name, null);
-        var errno = std.c._errno().*;
-        try stdout.print("status:{d}:errno:{d}\n", .{
-            status,
-            errno,
-        });
-        _ = stdio.printf("%s\n", string.strerror(errno));
-    }
+    // TODO remove
+    _ = stdout;
+    // var errno = std.c._errno().*;
+    // try stdout.print("status:{d}:errno:{d}\n", .{
+    //     status,
+    //     errno,
+    // });
+    // _ = stdio.printf("%s\n", string.strerror(errno));
 }
 
 fn print_shortened_path(info: PrinterInfo) !void {

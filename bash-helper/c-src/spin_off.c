@@ -3,14 +3,15 @@
 #include <stdio.h>
 #include <string.h>
 
-int main(int argc, char **argv) {
+void tmux_refresh_client() {
     int process = fork();
     if (process < 0) {
         printf("Fork error\n");
     }
     if (process == 0) {
         char *exe_name = "tmux";
-        char *params[]  = {"tmux", "refresh-client", NULL};
+        char *second_param = "refresh-client";
+        char *params[]  = {exe_name, second_param, NULL};
         int status = execvp(exe_name, params);
 
         // snatched from https://stackoverflow.com/a/32142863
@@ -20,5 +21,4 @@ int main(int argc, char **argv) {
         //on successful execution of cmd, this exit never appears
         printf("main.c: status:%d,errno:%d,error:%s\n", status, errno, strerror(errno));
     }
-    /* sleep(100); */
 }
