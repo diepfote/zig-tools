@@ -17,19 +17,25 @@ const PrinterInfo = struct {
     path: PrintPath,
 };
 
-fn update_tmp_bash_env_content(os_cloud: ?[:0]const u8, kubeconfig: ?[:0]const u8, stdout: std.fs.File.Writer) !void {
-
-    // TODO handle unset variables
+fn update_tmp_bash_env_content(os_cloud: ?[:0]u8, kubeconfig: ?[:0]u8) !void {
+    var local_kubeconfig: [:0]u8 = @constCast("");
+    var local_os_cloud: [:0]u8 = @constCast("");
+    if (kubeconfig != null) {
+        local_kubeconfig = kubeconfig.?;
+    }
+    if (os_cloud != null) {
+        local_os_cloud = os_cloud.?;
+    }
 
     var kubecfg_file = try std.fs.createFileAbsolute("/tmp/._kubeconfig", .{ .truncate = true });
     // var kubecfg_file = try std.fs.openFileAbsolute("/tmp/._kubeconfig", .{
     //     .mode = .write_only,
     // });
-    try kubecfg_file.writer().writeAll(kubeconfig.?);
+    try kubecfg_file.writer().writeAll(local_kubeconfig);
     defer kubecfg_file.close();
 
     var openstack_file = try std.fs.createFileAbsolute("/tmp/._openstack_cloud", .{ .truncate = true });
-    try openstack_file.writer().writeAll(os_cloud.?);
+    try openstack_file.writer().writeAll(local_os_cloud);
     defer openstack_file.close();
 
     // TODO trigger tmux refresh
@@ -41,24 +47,9 @@ fn update_tmp_bash_env_content(os_cloud: ?[:0]const u8, kubeconfig: ?[:0]const u
     });
 
     spin_off.tmux_refresh_client();
-
-    // TODO remove
-    _ = stdout;
-    // var errno = std.c._errno().*;
-    // try stdout.print("status:{d}:errno:{d}\n", .{
-    //     status,
-    //     errno,
-    // });
-    // _ = stdio.printf("%s\n", string.strerror(errno));
 }
 
 fn print_shortened_path(info: PrinterInfo) !void {
-    // TODO optionals ... in_container
-    // var args?
-    //
-    // prefix += "NOT_HOST_ENV: "
-    //
-
     const stdout = info.stdout;
     const color = info.color;
     const no_color = info.no_color;
@@ -75,19 +66,22 @@ fn print_shortened_path(info: PrinterInfo) !void {
     // why? https://ziglang.org/documentation/master/#:~:text=//%20Zig%20has%20no,%2C%20.%7B%20hello%2C%20world%20%7D)%3B
     var home_buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
     const home_slice = home_buf[0..];
-    // TODO fix null pointer deref if path = "/"
-    // thread 30948312 panic: attempt to use null value
-    // /Users/florian.sorko/Documents/zig/tools/bash-helper/main.zig:43:170: 0x1048acb3b in print_shortened_path (main)
-    //     const home_concat = try std.fmt.bufPrint(home_slice, "{s}/{s}/{s}", .{ @constCast(path_split.next().?), @constCast(path_split.next().?), @constCast(path_split.next().?) });
 
+    // TODO test path_split length before calling next
+    // otherwise set home_concat to path
+    // TODO or we concat the buffer in a while loop.
+    // call next() repeatedly
     const home_concat = try std.fmt.bufPrint(home_slice, "{s}/{s}/{s}", .{ @constCast(path_split.next().?), @constCast(path_split.next().?), @constCast(path_split.next().?) });
-    // try stdout.print("home_concat: {s}\n", .{home_concat});
-    // _ = try std.fmt.bufPrint(home_slice, "{s}/{s}/{s}", .{ @constCast(path_split.next().?), @constCast(path_split.next().?), @constCast(path_split.next().?) });
 
+    if (info.not_host_env != null) {
+        prefix = @constCast("NOT_HOST_ENV: ");
+    }
+
+    var prefix_concat: [std.fs.MAX_PATH_BYTES]u8 = undefined;
     if (std.mem.eql(u8, info.home, home_concat)) {
-        prefix = @constCast("~/");
+        prefix = @constCast(try std.fmt.bufPrint(&prefix_concat, "{s}{s}", .{ prefix, @constCast("~/") }));
     } else {
-        prefix = home_concat;
+        prefix = @constCast(try std.fmt.bufPrint(&prefix_concat, "{s}{s}", .{ prefix, home_concat }));
     }
 
     //
@@ -116,8 +110,8 @@ pub fn main() !void {
     // try stdout.print("cwd: {s}\n", .{cwd});
 
     const home = std.os.getenv("HOME");
-    const os_cloud = std.os.getenv("OS_CLOUD");
-    const kubeconfig = std.os.getenv("KUBECONFIG");
+    var os_cloud = @constCast(std.os.getenv("OS_CLOUD"));
+    var kubeconfig = @constCast(std.os.getenv("KUBECONFIG"));
     const green = std.os.getenv("GREEN");
     const blue = std.os.getenv("BLUE");
     const no_color = std.os.getenv("NC");
@@ -150,5 +144,5 @@ pub fn main() !void {
 
     try stdout.print("{s}", .{"\n$ "});
 
-    try update_tmp_bash_env_content(os_cloud, kubeconfig, stdout);
+    try update_tmp_bash_env_content(os_cloud, kubeconfig);
 }
