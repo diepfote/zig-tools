@@ -74,7 +74,9 @@ fn print_shortened_path(info: PrinterInfo) !void {
     const home_concat = try std.fmt.bufPrint(home_slice, "{s}/{s}/{s}", .{ @constCast(path_split.next().?), @constCast(path_split.next().?), @constCast(path_split.next().?) });
 
     if (info.not_host_env != null) {
-        prefix = @constCast("NOT_HOST_ENV: ");
+        if (!std.mem.eql(u8, info.not_host_env.?, "")) {
+            prefix = @constCast("NOT_HOST_ENV: ");
+        }
     }
 
     var prefix_concat: [std.fs.MAX_PATH_BYTES]u8 = undefined;
