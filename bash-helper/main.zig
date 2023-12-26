@@ -38,14 +38,14 @@ fn update_tmp_bash_env_content(os_cloud: ?[:0]u8, kubeconfig: ?[:0]u8) !void {
     try openstack_file.writer().writeAll(local_os_cloud);
     defer openstack_file.close();
 
-    // TODO trigger tmux refresh
+    // trigger tmux refresh
+    //
     // https://github.com/oven-sh/bun/blob/93714292bfea5140c62b6750c71c91ed20d819c5/src/install/repository.zig#L114
     // https://github.com/evopen/ziglings/blob/614e7561737c340dcf8d7022b8e5bf8bcf22d84a/tools/check-exercises.zig#L33
     //
     const spin_off = @cImport({
         @cInclude("spin_off.c");
     });
-
     spin_off.tmux_refresh_client();
 }
 
@@ -61,47 +61,48 @@ fn print_shortened_path(info: PrinterInfo) !void {
         .pointer => path = @constCast(info.path.pointer.?),
     }
 
-    var path_split = std.mem.split(u8, path, "/");
-    var prefix: []u8 = "";
-    // why? https://ziglang.org/documentation/master/#:~:text=//%20Zig%20has%20no,%2C%20.%7B%20hello%2C%20world%20%7D)%3B
-    var home_buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
-    const home_slice = home_buf[0..];
-
-    // TODO test path_split length before calling next
-    // otherwise set home_concat to path
-    // TODO or we concat the buffer in a while loop.
-    // call next() repeatedly
-    const home_concat = try std.fmt.bufPrint(home_slice, "{s}/{s}/{s}", .{ @constCast(path_split.next().?), @constCast(path_split.next().?), @constCast(path_split.next().?) });
+    var not_host_env_indicator: []u8 = @constCast("");
+    // string.contains ... std.mem.count(u8, data, test_string) -> https://nofmal.github.io/zig-with-example/string-handling/
+    // TODO remove home from path if path contains home
+    // TODO maybe we can use count to move x characters ahead in path before we do the split
+    var prefix = if (std.mem.count(u8, path, info.home) > 0) "~/" else "/";
 
     if (info.not_host_env != null) {
         if (!std.mem.eql(u8, info.not_host_env.?, "")) {
-            prefix = @constCast("NOT_HOST_ENV: ");
+            not_host_env_indicator = @constCast("NOT_HOST_ENV: ");
         }
     }
 
-    var prefix_concat: [std.fs.MAX_PATH_BYTES]u8 = undefined;
-    if (std.mem.eql(u8, info.home, home_concat)) {
-        prefix = @constCast(try std.fmt.bufPrint(&prefix_concat, "{s}{s}", .{ prefix, @constCast("~/") }));
-    } else {
-        prefix = @constCast(try std.fmt.bufPrint(&prefix_concat, "{s}{s}", .{ prefix, home_concat }));
-    }
-
-    //
+    try stdout.print("{?s}", .{not_host_env_indicator});
     try stdout.print("{s}", .{color});
     try stdout.print("{?s}", .{prefix});
     var pre_previous: []u8 = "";
     var previous: []u8 = "";
+
+    // TODO remove home from path if path contains home
+    var path_split = std.mem.split(u8, path, "/");
+    var count: u16 = 0;
     while (path_split.next()) |item| {
+        count += 1;
         if (pre_previous.len > 0) {
             try stdout.print("{c}/", .{pre_previous[0]});
         }
         pre_previous = previous;
         previous = @constCast(item);
     }
+
+    if (count < 2) {
+        try stdout.print("{s}", .{no_color});
+        return;
+    } else if (count < 3) {
+        try stdout.print("{s}", .{previous});
+        try stdout.print("{s}", .{no_color});
+        return;
+    }
+
+    // print last values for pre_previous and previous
     try stdout.print("{s}/{s}", .{ pre_previous, previous });
     try stdout.print("{s}", .{no_color});
-    // try stdout.print("home_buf: {?s}\n", .{home_buf});
-    // try stdout.print("{s}{s}{s}", .{ color, path, no_color });
 }
 
 pub fn main() !void {
