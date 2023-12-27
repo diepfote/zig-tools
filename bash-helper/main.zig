@@ -15,6 +15,7 @@ const PrinterInfo = struct {
     no_color: [:0]const u8,
     not_host_env: ?[:0]const u8,
     path: PrintPath,
+    is_virtualenv_path: bool,
 };
 
 fn update_tmp_bash_env_content(os_cloud: ?[:0]u8, kubeconfig: ?[:0]u8) !void {
@@ -68,7 +69,9 @@ fn print_shortened_path(info: PrinterInfo) !void {
     var not_host_env_indicator: []u8 = @constCast("");
     if (info.not_host_env != null) {
         if (!std.mem.eql(u8, info.not_host_env.?, "")) {
-            not_host_env_indicator = @constCast("NOT_HOST_ENV: ");
+            if (!info.is_virtualenv_path) {
+                not_host_env_indicator = @constCast("NOT_HOST_ENV: ");
+            }
         }
     }
 
@@ -130,6 +133,7 @@ pub fn main() !void {
         .no_color = no_color.?,
         .not_host_env = not_host_env,
         .path = print_path,
+        .is_virtualenv_path = false,
     };
     try print_shortened_path(info);
 
@@ -139,6 +143,7 @@ pub fn main() !void {
         };
         info.path = print_path;
         info.color = blue.?;
+        info.is_virtualenv_path = true;
         try stdout.print("{s}", .{" ("});
         try print_shortened_path(info);
         try stdout.print("{s}", .{")"});
@@ -146,5 +151,9 @@ pub fn main() !void {
 
     try stdout.print("{s}", .{"\n$ "});
 
-    try update_tmp_bash_env_content(os_cloud, kubeconfig);
+    if (info.not_host_env != null) {
+        if (std.mem.eql(u8, info.not_host_env.?, "")) {
+            try update_tmp_bash_env_content(os_cloud, kubeconfig);
+        }
+    }
 }
