@@ -1,6 +1,6 @@
 # Bash PS1 helper
 
-Build instructions
+## Build instructions
 
 ```text
 # -lc  ... use libc
@@ -8,3 +8,9 @@ Build instructions
 zig build-exe -lc -I c-src/ main.zig
 ```
 
+For a specific architecture
+
+```text
+# e.g. for lima vm prompts 
+zig build-exe -lc -I c-src/ -target x86_64-linux-gnu -femit-bin=main-linux main.zig
+```

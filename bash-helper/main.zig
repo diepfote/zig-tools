@@ -61,12 +61,11 @@ fn print_shortened_path(info: PrinterInfo) !void {
         .pointer => path = @constCast(info.path.pointer.?),
     }
 
-    var not_host_env_indicator: []u8 = @constCast("");
     // string.contains ... std.mem.count(u8, data, test_string) -> https://nofmal.github.io/zig-with-example/string-handling/
-    // TODO remove home from path if path contains home
-    // TODO maybe we can use count to move x characters ahead in path before we do the split
-    var prefix = if (std.mem.count(u8, path, info.home) > 0) "~/" else "/";
+    var contains_home = if (std.mem.count(u8, path, info.home) > 0) true else false;
+    var prefix = if (contains_home) "~/" else "/";
 
+    var not_host_env_indicator: []u8 = @constCast("");
     if (info.not_host_env != null) {
         if (!std.mem.eql(u8, info.not_host_env.?, "")) {
             not_host_env_indicator = @constCast("NOT_HOST_ENV: ");
@@ -79,7 +78,7 @@ fn print_shortened_path(info: PrinterInfo) !void {
     var pre_previous: []u8 = "";
     var previous: []u8 = "";
 
-    // TODO remove home from path if path contains home
+    path = if (contains_home) path[info.home.len..] else path;
     var path_split = std.mem.split(u8, path, "/");
     var count: u16 = 0;
     while (path_split.next()) |item| {

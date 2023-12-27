@@ -1,0 +1,9 @@
+*
+*/*
+
+!.gitignore
+
+!*.zig
+
+!/c-src/
+!/c-src/*.c
