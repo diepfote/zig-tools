@@ -14,6 +14,7 @@ const PrinterInfo = struct {
     color: [:0]const u8,
     no_color: [:0]const u8,
     not_host_env: ?[:0]const u8,
+    not_host_env_color: [:0]const u8,
     path: PrintPath,
     is_virtualenv_path: bool,
 };
@@ -63,8 +64,8 @@ fn print_shortened_path(info: PrinterInfo) !void {
     }
 
     // string.contains ... std.mem.count(u8, data, test_string) -> https://nofmal.github.io/zig-with-example/string-handling/
-    var contains_home = if (std.mem.count(u8, path, info.home) > 0) true else false;
-    var prefix = if (contains_home) "~/" else "/";
+    const contains_home = if (std.mem.count(u8, path, info.home) > 0) true else false;
+    const prefix = if (contains_home) "~/" else "/";
 
     var not_host_env_indicator: []u8 = @constCast("");
     if (info.not_host_env != null) {
@@ -111,17 +112,18 @@ pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
 
     var buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
-    const cwd = try std.os.getcwd(&buf);
+    const cwd = try std.posix.getcwd(&buf);
     // try stdout.print("cwd: {s}\n", .{cwd});
 
-    const home = std.os.getenv("HOME");
-    var os_cloud = @constCast(std.os.getenv("OS_CLOUD"));
-    var kubeconfig = @constCast(std.os.getenv("KUBECONFIG"));
-    const green = std.os.getenv("GREEN");
-    const blue = std.os.getenv("BLUE");
-    const no_color = std.os.getenv("NC");
-    const virtualenv = std.os.getenv("VIRTUAL_ENV");
-    const not_host_env = std.os.getenv("NOT_HOST_ENV");
+    const home = std.posix.getenv("HOME");
+    const os_cloud = @constCast(std.posix.getenv("OS_CLOUD"));
+    const kubeconfig = @constCast(std.posix.getenv("KUBECONFIG"));
+    const green = std.posix.getenv("GREEN");
+    const blue = std.posix.getenv("BLUE");
+    const red = std.posix.getenv("RED");
+    const no_color = std.posix.getenv("NC");
+    const virtualenv = std.posix.getenv("VIRTUAL_ENV");
+    const not_host_env = std.posix.getenv("NOT_HOST_ENV");
 
     var print_path = PrintPath{
         .regular = cwd,
@@ -132,6 +134,7 @@ pub fn main() !void {
         .color = green.?,
         .no_color = no_color.?,
         .not_host_env = not_host_env,
+        .not_host_env_color = red.?,
         .path = print_path,
         .is_virtualenv_path = false,
     };
