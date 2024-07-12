@@ -54,6 +54,7 @@ fn update_tmp_bash_env_content(os_cloud: ?[:0]u8, kubeconfig: ?[:0]u8) !void {
 fn print_shortened_path(info: PrinterInfo) !void {
     const stdout = info.stdout;
     const color = info.color;
+    const host_color = info.not_host_env_color;
     const no_color = info.no_color;
 
     var path: []u8 = "";
@@ -67,16 +68,15 @@ fn print_shortened_path(info: PrinterInfo) !void {
     const contains_home = if (std.mem.count(u8, path, info.home) > 0) true else false;
     const prefix = if (contains_home) "~/" else "/";
 
-    var not_host_env_indicator: []u8 = @constCast("");
     if (info.not_host_env != null) {
         if (!std.mem.eql(u8, info.not_host_env.?, "")) {
             if (!info.is_virtualenv_path) {
-                not_host_env_indicator = @constCast("NOT_HOST_ENV: ");
+                try stdout.print("{?s}", .{host_color});
+                try stdout.print("{?s}", .{"NOT_HOST_ENV: "});
+                try stdout.print("{?s}", .{no_color});
             }
         }
     }
-
-    try stdout.print("{?s}", .{not_host_env_indicator});
     try stdout.print("{s}", .{color});
     try stdout.print("{?s}", .{prefix});
     var pre_previous: []u8 = "";
