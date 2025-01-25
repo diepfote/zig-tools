@@ -44,6 +44,7 @@ fn tmux_refresh_client() !void {
     proc.stdout_behavior = .Ignore;
     proc.stderr_behavior = .Ignore;
 
+    debug("spawning: {s}", .{argv});
     proc.spawn() catch return;
 
     debug("Spawned process PID: {d}", .{proc.id});
