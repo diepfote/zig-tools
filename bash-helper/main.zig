@@ -19,6 +19,28 @@ const PrinterInfo = struct {
     is_virtualenv_path: bool,
 };
 
+fn tmux_refresh_client() !void {
+    // snatched from:
+    // https://renatoathaydes.github.io/zig-common-tasks/samples/alloc.zig
+    // https://renatoathaydes.github.io/zig-common-tasks/samples/exec_process.zig
+
+    const argv = [_][]const u8{ "tmux", "refresh-client" };
+
+    // init a ChildProcess... cleanup is done by calling wait().
+    const alloc: std.mem.Allocator = std.heap.page_allocator;
+    var proc = std.process.Child.init(&argv, alloc);
+
+    // ignore the streams to avoid the zig build blocking...
+    // REMOVE THESE IF YOU ACTUALLY WANT TO INHERIT THE STREAMS.
+    proc.stdin_behavior = .Ignore;
+    proc.stdout_behavior = .Ignore;
+    proc.stderr_behavior = .Ignore;
+
+    try proc.spawn();
+
+    // std.debug.print("Spawned process PID={}\n", .{proc.id});
+}
+
 fn update_tmp_bash_env_content(os_cloud: ?[:0]u8, kubeconfig: ?[:0]u8) !void {
     var local_kubeconfig: [:0]u8 = @constCast("");
     var local_os_cloud: [:0]u8 = @constCast("");
@@ -40,15 +62,7 @@ fn update_tmp_bash_env_content(os_cloud: ?[:0]u8, kubeconfig: ?[:0]u8) !void {
     try openstack_file.writer().writeAll(local_os_cloud);
     defer openstack_file.close();
 
-    // trigger tmux refresh
-    //
-    // https://github.com/oven-sh/bun/blob/93714292bfea5140c62b6750c71c91ed20d819c5/src/install/repository.zig#L114
-    // https://github.com/evopen/ziglings/blob/614e7561737c340dcf8d7022b8e5bf8bcf22d84a/tools/check-exercises.zig#L33
-    //
-    const spin_off = @cImport({
-        @cInclude("spin_off.c");
-    });
-    spin_off.tmux_refresh_client();
+    try tmux_refresh_client();
 }
 
 fn print_shortened_path(info: PrinterInfo) !void {
