@@ -1,9 +1,13 @@
 const std = @import("std");
+
 const _print = @import("print.zig");
 const print = _print.print;
 const debug = _print.debug;
 const log_info = _print.log_info;
 const log_err = _print.log_err;
+
+const file_io = @import("file_io.zig");
+const write_file = file_io.write_file;
 
 const PrintPathType = enum {
     regular,
@@ -40,7 +44,7 @@ fn tmux_refresh_client() !void {
     proc.stdout_behavior = .Ignore;
     proc.stderr_behavior = .Ignore;
 
-    try proc.spawn();
+    proc.spawn() catch return;
 
     debug("Spawned process PID: {d}", .{proc.id});
 }
@@ -59,16 +63,8 @@ fn update_tmp_bash_env_content(os_cloud: ?[:0]u8, kubeconfig: ?[:0]u8) !void {
     debug("local_kubeconfig: {s}", .{local_kubeconfig});
     debug("local_os_cloud: {s}", .{local_os_cloud});
 
-    var kubecfg_file = try std.fs.createFileAbsolute("/tmp/._kubeconfig", .{ .truncate = true });
-    // var kubecfg_file = try std.fs.openFileAbsolute("/tmp/._kubeconfig", .{
-    //     .mode = .write_only,
-    // });
-    try kubecfg_file.writer().writeAll(local_kubeconfig);
-    defer kubecfg_file.close();
-
-    var openstack_file = try std.fs.createFileAbsolute("/tmp/._openstack_cloud", .{ .truncate = true });
-    try openstack_file.writer().writeAll(local_os_cloud);
-    defer openstack_file.close();
+    try write_file(@constCast("/tmp/._kubeconfig"), local_kubeconfig);
+    try write_file(@constCast("/tmp/._openstack_cloud"), local_os_cloud);
 
     try tmux_refresh_client();
 }
