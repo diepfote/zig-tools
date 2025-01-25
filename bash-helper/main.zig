@@ -1,4 +1,9 @@
 const std = @import("std");
+const _print = @import("print.zig");
+const print = _print.print;
+const debug = _print.debug;
+const log_info = _print.log_info;
+const log_err = _print.log_err;
 
 const PrintPathType = enum {
     regular,
@@ -9,7 +14,6 @@ const PrintPath = union(PrintPathType) {
     pointer: ?[:0]const u8,
 };
 const PrinterInfo = struct {
-    stdout: std.fs.File.Writer,
     home: [:0]const u8,
     color: [:0]const u8,
     no_color: [:0]const u8,
@@ -38,7 +42,7 @@ fn tmux_refresh_client() !void {
 
     try proc.spawn();
 
-    // std.debug.print("Spawned process PID={}\n", .{proc.id});
+    debug("Spawned process PID: {d}", .{proc.id});
 }
 
 fn update_tmp_bash_env_content(os_cloud: ?[:0]u8, kubeconfig: ?[:0]u8) !void {
@@ -50,6 +54,10 @@ fn update_tmp_bash_env_content(os_cloud: ?[:0]u8, kubeconfig: ?[:0]u8) !void {
     if (os_cloud != null) {
         local_os_cloud = os_cloud.?;
     }
+
+    // these will crash if the variable is unset/nil
+    debug("local_kubeconfig: {s}", .{local_kubeconfig});
+    debug("local_os_cloud: {s}", .{local_os_cloud});
 
     var kubecfg_file = try std.fs.createFileAbsolute("/tmp/._kubeconfig", .{ .truncate = true });
     // var kubecfg_file = try std.fs.openFileAbsolute("/tmp/._kubeconfig", .{
@@ -66,7 +74,6 @@ fn update_tmp_bash_env_content(os_cloud: ?[:0]u8, kubeconfig: ?[:0]u8) !void {
 }
 
 fn print_shortened_path(info: PrinterInfo) !void {
-    const stdout = info.stdout;
     const color = info.color;
     const host_color = info.not_host_env_color;
     const no_color = info.no_color;
@@ -85,14 +92,14 @@ fn print_shortened_path(info: PrinterInfo) !void {
     if (info.not_host_env != null) {
         if (!std.mem.eql(u8, info.not_host_env.?, "")) {
             if (!info.is_virtualenv_path) {
-                try stdout.print("{?s}", .{host_color});
-                try stdout.print("{?s}", .{"NOT_HOST_ENV: "});
-                try stdout.print("{?s}", .{no_color});
+                print("{?s}", .{host_color});
+                print("{?s}", .{"NOT_HOST_ENV: "});
+                print("{?s}", .{no_color});
             }
         }
     }
-    try stdout.print("{s}", .{color});
-    try stdout.print("{?s}", .{prefix});
+    print("{s}", .{color});
+    print("{?s}", .{prefix});
     var pre_previous: []u8 = "";
     var previous: []u8 = "";
 
@@ -102,32 +109,30 @@ fn print_shortened_path(info: PrinterInfo) !void {
     while (path_split.next()) |item| {
         count += 1;
         if (pre_previous.len > 0) {
-            try stdout.print("{c}/", .{pre_previous[0]});
+            print("{c}/", .{pre_previous[0]});
         }
         pre_previous = previous;
         previous = @constCast(item);
     }
 
     if (count < 2) {
-        try stdout.print("{s}", .{no_color});
+        print("{s}", .{no_color});
         return;
     } else if (count < 3) {
-        try stdout.print("{s}", .{previous});
-        try stdout.print("{s}", .{no_color});
+        print("{s}", .{previous});
+        print("{s}", .{no_color});
         return;
     }
 
     // print last values for pre_previous and previous
-    try stdout.print("{s}/{s}", .{ pre_previous, previous });
-    try stdout.print("{s}", .{no_color});
+    print("{s}/{s}", .{ pre_previous, previous });
+    print("{s}", .{no_color});
 }
 
 pub fn main() !void {
-    const stdout = std.io.getStdOut().writer();
-
     var buf: [std.fs.MAX_PATH_BYTES]u8 = undefined;
     const cwd = try std.posix.getcwd(&buf);
-    // try stdout.print("cwd: {s}\n", .{cwd});
+    // print("cwd: {s}\n", .{cwd});
 
     const home = std.posix.getenv("HOME");
     const os_cloud = @constCast(std.posix.getenv("OS_CLOUD"));
@@ -143,7 +148,6 @@ pub fn main() !void {
         .regular = cwd,
     };
     var info = PrinterInfo{
-        .stdout = stdout,
         .home = home.?,
         .color = green.?,
         .no_color = no_color.?,
@@ -161,12 +165,12 @@ pub fn main() !void {
         info.path = print_path;
         info.color = blue.?;
         info.is_virtualenv_path = true;
-        try stdout.print("{s}", .{" ("});
+        print("{s}", .{" ("});
         try print_shortened_path(info);
-        try stdout.print("{s}", .{")"});
+        print("{s}", .{")"});
     }
 
-    try stdout.print("{s}", .{"\n$ "});
+    print("{s}", .{"\n$ "});
 
     if (info.not_host_env != null) {
         if (std.mem.eql(u8, info.not_host_env.?, "")) {
